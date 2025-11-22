@@ -9,15 +9,17 @@ for using the rap toolkit, you will need:
 - **git**
 - **sed**
 - **xxd**
-- **binutils**
+- **binutils** - quickjs will need this
 - **bash**
-- a C compiler
+- **a C compiler** - i recommend gcc or tcc, but almost any c compiler is supported.
 
-in other words, rap toolkit requires a **linux**(*maybe* other unixes too) and those will probably already be included in most distros;
+most linux systems will already include everything above;
 
-those are also required but the scripts will auto deal with'em:
+all requirements below are auto downloaded if not found:
 - **makeself** - https://makeself.io/ or https://github.com/megastep/makeself
 - **quickjs** - https://bellard.org/quickjs/ or https://github.com/bellard/quickjs
+
+and of course it also requires urb:
 - **urb** - https://github.com/jardimdanificado/urb
 
 ## compatibility
