@@ -77,38 +77,77 @@ function collectMacros(src) {
     }
     return [macros, src];
 }
-// === EXPANSÃO DE MACROS ===
+// === EXPANSÃO DE MACROS (VERSÃO CORRIGIDA) ===
 function expandMacros(src, macros) {
     for (const name of Object.keys(macros)) {
         const body = macros[name];
         let changed = true;
-        while (changed) {
+        let iterations = 0;
+        
+        while (changed && iterations < maxIterations) {
             changed = false;
-            const pattern = new RegExp(
-                `\\b${escapeRegex(name)}\\b(?:\\s*\\(\\s*([^()]*)\\s*\\)|(?:\\s+([^\
-{};()]+(?:\\s+[^\
-{};()]+)*)))`,
-                'g'
-            );
-            src = src.replace(pattern, (match, p1, p2) => {
-                changed = true;
-                const argsRaw = (p1 !== undefined && p1.length > 0) ? p1 : p2;
-                let vals = [];
-                if (p1 !== undefined && p1.length > 0) {
-                    vals = p1.split(',').map(v => v.trim());
-                } else {
-                    vals = argsRaw.trim().split(/\s+/);
+            iterations++;
+            const originalSrc = src;
+            
+            // Procura por: name(args) ou name args
+            let i = 0;
+            let result = '';
+            
+            while (i < src.length) {
+                // Tenta encontrar o próximo nome de macro
+                const remaining = src.substring(i);
+                const nameMatch = remaining.match(new RegExp(`^(.*?)\\b${escapeRegex(name)}\\b`, 's'));
+                
+                if (!nameMatch) {
+                    result += remaining;
+                    break;
                 }
+                
+                result += nameMatch[1];
+                i += nameMatch[0].length;
+                
+                // Verifica se há ( depois do nome
+                let k = i;
+                while (k < src.length && src[k] === ' ') k++;
+                
+                let vals = [];
+                
+                if (k < src.length && src[k] === '(') {
+                    // Extrai argumentos com balanceamento
+                    const [argsStr, posAfter] = extractBlock(src, k, '(', ')');
+                    vals = argsStr.split(',').map(v => v.trim());
+                    i = posAfter;
+                    changed = true;
+                } else {
+                    // Tenta capturar argumentos separados por espaço
+                    const spaceMatch = src.substring(i).match(/^(\s+([^\s{};()]+(?:\s+[^\s{};()]+)*?))?(?=\s*[{};()$]|\n|$)/);
+                    if (spaceMatch && spaceMatch[2]) {
+                        vals = spaceMatch[2].split(/\s+/);
+                        i += spaceMatch[0].length;
+                        changed = true;
+                    } else {
+                        result += name;
+                        continue;
+                    }
+                }
+                
+                // Expande o macro
                 let exp = body;
                 exp = exp.replace(/\$0\b/g, name);
-                for (let i = 0; i < vals.length; i++) {
-                    const n = i + 1;
-                    const v = vals[i];
-                    exp = exp.replace(new RegExp(`\\$${n}(?!\\d)`, 'g'), v);
+                for (let j = 0; j < vals.length; j++) {
+                    const paramNum = j + 1;
+                    const paramVal = vals[j];
+                    exp = exp.replace(new RegExp(`\\$${paramNum}(?!\\d)`, 'g'), paramVal);
                 }
                 exp = exp.replace(/\$\d+\b/g, '');
-                return exp;
-            });
+                result += exp;
+            }
+            
+            src = result;
+            
+            if (src === originalSrc) {
+                changed = false;
+            }
         }
     }
     return src;
@@ -507,8 +546,7 @@ function convertBitwiseOperators(src) {
     }
     return src;
 }
-
-// === CONVERSÃO DO OPERADOR DE DEFINIÇÃO ===
+// === CONVERSÃO DO OPERADOR DE DEFINIÇÃO (CORRIGIDO) ===
 function convertAssignment(src) {
     let changed = true;
     let iterations = 0;
@@ -517,52 +555,40 @@ function convertAssignment(src) {
         changed = false;
         iterations++;
         const original = src;
-        // @ é parte do identificador desde o início
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\+=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\+=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, add($1, $2))');
-        });
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*-=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*-=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, sub($1, $2))');
-        });
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\*=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\*=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, mul($1, $2))');
-        });
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\/=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\/=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, div($1, $2))');
-        });
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*%=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*%=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, mod($1, $2))');
-        });
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*&=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*&=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, band($1, $2))');
-        });
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\|=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\|=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, bor($1, $2))');
-        });
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\^=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*\^=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, bxor($1, $2))');
-        });
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*<<=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*<<=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, lshift($1, $2))');
-        });
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*>>=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*>>=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, rshift($1, $2))');
-        });
-        // @ é parte do identificador desde o início
-        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*=\s*(?!=)(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
-            changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*=\s*(?!=)(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, $2)');
-        });
+        
+        // Processa atribuições compostas primeiro
+        const compoundOps = ['+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>='];
+        const compoundFuncs = ['add', 'sub', 'mul', 'div', 'mod', 'band', 'bor', 'bxor', 'lshift', 'rshift'];
+        
+        for (let i = 0; i < compoundOps.length; i++) {
+            const op = compoundOps[i];
+            const func = compoundFuncs[i];
+            const escapedOp = op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // Captura até ponto-e-vírgula, quebra de linha ou fim da linha
+            const pattern = new RegExp(
+                `(@?[A-Za-z_][@A-Za-z0-9_]*)\\s*${escapedOp}\\s*([^;\\n]+?)(?=;|\\n|$)`,
+                'g'
+            );
+            
+            src = src.replace(pattern, (match, varName, exprRaw) => {
+                changed = true;
+                const expr = exprRaw.trim();
+                return `set(mem, ${varName}, ${func}(@${varName}, ${expr}))`;
+            });
+        }
+        
+        // Agora processa atribuição simples (=)
+        // Captura até ponto-e-vírgula, quebra de linha ou fim da linha
+        src = src.replace(
+            /(@?[A-Za-z_][@A-Za-z0-9_]*)\s*=\s*(?!=)([^;=\n]+?)(?=;|\n|$)/g,
+            (match, varName, exprRaw) => {
+                changed = true;
+                const expr = exprRaw.trim();
+                return `set(mem, ${varName}, ${expr})`;
+            }
+        );
+        
         if (src === original) {
             changed = false;
         }
@@ -574,6 +600,7 @@ function convertAssignment(src) {
 function reorderFunctionCalls(src, macros) {
     const forbidden = { ...macros, 'private': true, 'public': true, 'protected': true };
     let changed = true;
+
     let iterations = 0;
     
     

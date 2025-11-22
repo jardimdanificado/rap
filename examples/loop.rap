@@ -5,7 +5,7 @@
 private i {0}
 private loop {
     println(@i)
-    set(mem, i, add(@i, 1))
+    i += 1
 }
 
-goif(le(@i, 100000), loop)
+goif(@i < 100000, loop)

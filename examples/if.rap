@@ -1,10 +1,13 @@
-goif(ge(1, 900), if)
-goto(else)
-
-private if {
-    pring("the condition is true\n")
+// new
+macro if{
+    goif($2, $1_true)
+    goto($1_false)
+    private $1_true {
+        $3
+    }
+    private $1_false {
+        $4
+    }
 }
 
-private else {
-    pringln("the condition is false!")
-}
+if(generic_name, 1 >= 900, pring("the condition is true\n"), pring("the condition is false\n"))
