@@ -1,24 +1,31 @@
 # rap
-rap is the urb language, it is **COMPLETELY EXPERIMENTAL AND UNSTABLE**.
+rap is a **EXPERIMENTAL AND UNSTABLE *EXAMPLE*** language to demonstrate usage of urb virtual machine.
 
 proper standards and documentation are currently WIP
 
 ## requirements
 
-in case you using the urb language you will need:
-- a C compiler, 
-- **git**, 
-- **make**, 
-- **bash**, **sed**, **xxd** etc...
+for using the rap toolkit, you will need:
+- **git**
+- **sed**
+- **xxd**
+- **binutils**
+- **bash**
+- a C compiler
 
-those are also required but the scripts clone and build'em manually:
-- **makeself**,
-- **quickjs**
+in other words, rap toolkit requires a **linux**(*maybe* other unixes too) and those will probably already be included in most distros;
+
+those are also required but the scripts will auto deal with'em:
+- **makeself** - https://makeself.io/ or https://github.com/megastep/makeself
+- **quickjs** - https://bellard.org/quickjs/ or https://github.com/bellard/quickjs
+- **urb** - https://github.com/jardimdanificado/urb
+
+## compatibility
+the **toolkit** is only meant to support linux.
+
+but you can still cross-compiling embedded urb from linux to other systems like windows or such.
 
 ## compiling
+from the repo root run ``make`` and you will find the rap toolkit in ``./build/rap``, then run ``rap help`` and you will probably find everything you need there, further docs are bein written right now...
 
-from the repo root run ``make`` and you will find the rap toolkit in ``./build/rap``, then run ``rap help`` and you will probably find everything you need there, futher docs are bein written right now...
-
-the toolkit is meant for portability and ease of use, it is only meant to support linux(might work well on other unixes too, but i havnt tested 'em, so i cant assure).
-
-rap toolkit does not work on windows directly, but you can cross-compile with something like ``rap embed file.rap -o file.exe -cc $mingw`` from WSL or such...
+as the rap toolkit does not work on windows directly, but you can cross-compile with something like ``rap embed file.rap -o file.exe -cc $mingw`` from WSL or such...

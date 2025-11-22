@@ -2,7 +2,7 @@
 set -euo pipefail
 
 INPUT_FILE="$1"
-EMBED_SRC="./rap/src/boilerplate.c"
+EMBED_SRC="./src/boilerplate.c"
 
 TMP_FILE=$(mktemp)
 

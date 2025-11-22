@@ -15,4 +15,4 @@ else
     qjs=qjs
 fi
 
-$qjs ./rap/src/parser.qjs < "$1" 
+$qjs ./src/parser.qjs < "$1" 

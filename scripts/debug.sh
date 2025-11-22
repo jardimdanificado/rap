@@ -9,7 +9,7 @@ if [[ -z "$COMPILER" ]]; then
 fi
 
 mkdir -p build
-COMPILER="$COMPILER" ./rap/scripts/embed.sh "$1" "$2" > ./build/main
+COMPILER="$COMPILER" ./scripts/embed.sh "$1" "$2" > ./build/main
 chmod +x ./build/main
 
 # check valgrind-out.txt for the debug output

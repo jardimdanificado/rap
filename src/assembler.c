@@ -1,6 +1,6 @@
 #include "urb.h"
 // urb.c is a generated file
-#include "../../build/urb.c"
+#include "../build/urb.c"
 #include "stdarg.h"
 #include <stddef.h>
 

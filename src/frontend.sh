@@ -57,14 +57,14 @@ case "$command" in
 
     if [[ -n "$JUST_ASSEMBLE" ]]; then
         # Só assemble
-        ./rap/scripts/assemble.sh "${args[@]}" > "$USER_PWD/$output"
+        ./scripts/assemble.sh "${args[@]}" > "$USER_PWD/$output"
     elif [[ -n "$DONT_ASSEMBLE" ]]; then
         # Só preprocessa
-        ./rap/scripts/preprocess.sh "${args[@]}" > "$USER_PWD/$output"
+        ./scripts/preprocess.sh "${args[@]}" > "$USER_PWD/$output"
     else
         # Compila completo
-        ./rap/scripts/preprocess.sh "${args[@]}" > "$output$extension"
-        ./rap/scripts/assemble.sh "$output$extension" > "$USER_PWD/$output"
+        ./scripts/preprocess.sh "${args[@]}" > "$output$extension"
+        ./scripts/assemble.sh "$output$extension" > "$USER_PWD/$output"
     fi
 
     ;;
@@ -90,8 +90,8 @@ case "$command" in
     done
     
     if [[ -n "$NEED_TO_ASSEMBLE" ]]; then
-      ./rap/scripts/preprocess.sh "${args[@]}" > "tmp.suburb"
-      ./rap/scripts/assemble.sh "tmp.suburb" > "tmp.urb"
+      ./scripts/preprocess.sh "${args[@]}" > "tmp.suburb"
+      ./scripts/assemble.sh "tmp.suburb" > "tmp.urb"
       ./rapper "tmp.urb"
     else
       ./rapper "${args[@]}"
@@ -137,17 +137,17 @@ case "$command" in
     done
 
     if [[ -n "$NEED_TO_ASSEMBLE" ]]; then
-      ./rap/scripts/preprocess.sh "${args[@]}" > "tmp.suburb"
-      ./rap/scripts/assemble.sh "tmp.suburb" > "tmp.urb"
-      ./rap/scripts/gen_embedded_c.sh "tmp.urb" > build/embedded.c
+      ./scripts/preprocess.sh "${args[@]}" > "tmp.suburb"
+      ./scripts/assemble.sh "tmp.suburb" > "tmp.urb"
+      ./scripts/gen_embedded_c.sh "tmp.urb" > build/embedded.c
     else
-      ./rap/scripts/gen_embedded_c.sh "${args[@]}" > build/embedded.c
+      ./scripts/gen_embedded_c.sh "${args[@]}" > build/embedded.c
     fi
 
     if [[ -n "$DONT_COMPILE" ]]; then
       cp build/embedded.c "$USER_PWD/$output"
     else
-      $COMPILER -o "$USER_PWD/$output" build/embedded.c -I./
+      $COMPILER -o "$USER_PWD/$output" build/embedded.c -I./ -I./urb 
     fi
     ;;
 
@@ -203,7 +203,7 @@ case "$command" in
         ls
     else
         echo "no libs available"
-        cp rap/src/blank.c libs/
+        cp src/blank.c libs/
     fi
 
     

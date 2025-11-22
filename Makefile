@@ -3,7 +3,7 @@ libs ?= libs/*
 path ?= /usr/local/bin/
 compiler ?= gcc -O3 -lm -g
 all:
-	COMPILER="$(compiler)" LIBS="libs/*" ./rap/scripts/build_rap.sh
+	COMPILER="$(compiler)" LIBS="libs/*" ./scripts/build_rap.sh
 	@echo "if everything went fine exec can be found at build/rap"
 clean:
 	-rm -rf build rapper beatmaker makeself quickjs
@@ -17,7 +17,7 @@ ifndef filename
 	$(error filename missing! use: make debug filename=<file>)
 endif
 	mkdir -p build
-	COMPILER="$(compiler)" ./rap/scripts/debug.sh "$(filename)" "$(libs)"
+	COMPILER="$(compiler)" ./scripts/debug.sh "$(filename)" "$(libs)"
 
 install: all
 	sudo cp build/rap "$(path)"/

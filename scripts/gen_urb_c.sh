@@ -9,12 +9,12 @@ fi
 mkdir -p build
 interpreter_c="build/urb.c"
 
-mapfile -t output < <(rap/scripts/extract_funcs.sh "$@")
+mapfile -t output < <(scripts/extract_funcs.sh "$@")
 tmp_c="${output[0]}"
 funcs=("${output[@]:1}")
 
 {
-    echo "#include \"urb.h\""
+    echo "#include \"urb/urb.h\""
     echo "typedef struct List List;"
     echo "typedef union Value Value;"
     echo "typedef void (*Function)(List *stack);"

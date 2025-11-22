@@ -10,5 +10,5 @@ if [[ -n "$1" ]]; then
     LIBS="$1"
 fi
 
-COMPILER="$COMPILER" ./rap/scripts/embed.sh "rap/src/interpreter.rap" "$LIBS" > rapper
+COMPILER="$COMPILER" ./scripts/embed.sh "src/interpreter.rap" "$LIBS" > rapper
 chmod +x rapper

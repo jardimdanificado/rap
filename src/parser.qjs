@@ -3,7 +3,7 @@
 import * as std from 'std';
 
 // Carregar o core
-std.loadScript('./rap/src/parser.js');
+std.loadScript('./src/parser.js');
 
 // === LEITURA DE STDIN (QuickJS) ===
 function readStdin() {

@@ -13,9 +13,10 @@ rm -rf build/urb_tar
 rm -rf build/rap
 mkdir -p build/urb_tar/
 mkdir -p build/urb_tar/build/
-mkdir -p build/urb_tar/rap/
-mkdir -p build/urb_tar/rap/src/
-mkdir -p build/urb_tar/rap/scripts/
+mkdir -p build/urb_tar/
+mkdir -p build/urb_tar/urb/
+mkdir -p build/urb_tar/src/
+mkdir -p build/urb_tar/scripts/
 
 # MAKSELF
 if ! command -v makeself >/dev/null 2>&1; then
@@ -53,17 +54,17 @@ else
     qjs="qjs"
 fi
 
+# URB
 if [ ! -f "urb/urb.h" ]; then
     if [ ! -d "libs" ]; then
         mkdir libs
     fi
     rm -rf urb
     git clone https://github.com/jardimdanificado/urb.git
-    cp urb/urb.h .
     cp urb/libs/* ./libs/
 fi
 
-COMPILER="$COMPILER" ./rap/scripts/gen_interpreter.sh "$LIBS"
+COMPILER="$COMPILER" ./scripts/gen_interpreter.sh "$LIBS"
 
 cp -r libs build/urb_tar/
 
@@ -71,13 +72,13 @@ cp Makefile build/urb_tar/
 
 cp rapper build/urb_tar/
 cp beatmaker build/urb_tar/
-cp urb.h build/urb_tar/
+cp urb/urb.h build/urb_tar/urb/
 cp build/urb.c build/urb_tar/build/
 
-cp -r rap/scripts build/urb_tar/rap/
-cp -r rap/src build/urb_tar/rap/
+cp -r scripts build/urb_tar/
+cp -r src build/urb_tar/
 
-$makeself ./build/urb_tar build/rap rap_compiler_and_interpreter ./rap/src/frontend.sh
+$makeself ./build/urb_tar build/rap rap_compiler_and_interpreter ./src/frontend.sh
 
 # we need to force it to be quiet, otherwise we would need to pass --quiet every call
 # we also turn on the "nodiskspace"
