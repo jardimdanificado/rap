@@ -1,0 +1,25 @@
+private NB {0}
+private MALE {1}
+private FEMALE {2}
+
+macro Person 
+{
+    private $1 {
+        public $1_name {0}
+        public $1_age {$2}
+        public $1_weight {$3}
+        public $1_height {$4}
+        public $1_gender {$5}
+    }
+    set(mem, $1_name, "$1")
+}
+
+Person(joao, 21, 78, 159, NB)
+
+public main {
+    pringln(@joao_name)
+    println(@joao_age)
+    println(@joao_weight)
+    println(@joao_height)
+    println(@joao_gender)
+}

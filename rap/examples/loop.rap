@@ -1,0 +1,11 @@
+// seems tricky but is not really,
+// i[] delimits a local scope named i
+// the first value of that local scope is 0
+// so technically, i points to the value 0
+private i {0}
+private loop {
+    println(@i)
+    set(mem, i, add(@i, 1))
+}
+
+goif(le(@i, 100000), loop)

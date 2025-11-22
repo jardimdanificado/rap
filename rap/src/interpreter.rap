@@ -1,0 +1,21 @@
+// standalone interpreter alternative to embedding
+
+// we will store the file pointer here
+private file {0}
+
+// this auto-runs
+public main {
+    goif(lt(len(args), 2), error)
+    set(mem, file, load_urbin(get(args, 1)))
+    interpret(exec, @file, stack)
+}
+
+// this too
+public exit {
+    free(@file)
+}
+
+// but this will only be accessed if the flux is intentionally redirected
+private error {
+    pring("you need to pass a filename!\n")
+}

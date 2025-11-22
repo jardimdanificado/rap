@@ -1,0 +1,10 @@
+goif(ge(1, 900), if)
+goto(else)
+
+private if {
+    pring("the condition is true\n")
+}
+
+private else {
+    pringln("the condition is false!")
+}

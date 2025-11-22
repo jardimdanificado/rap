@@ -1,0 +1,26 @@
+private data {
+    a: 50
+    b: 123
+    // position string
+}
+
+protected str {
+    \abcde1\s234dasdajsdlakjdnlaknk124-1924dnkank\ndansdkandadkajkdka\s\s\s\s\n\sdasjkdaj\n
+}
+
+public main { 
+    println(@b)
+    println(@a)
+    println(main)
+    
+    // this
+    pring(pointer(mem, str))
+    
+    // is the same as:
+    pring("abcde1 234dasdajsdlakjdnlaknk124-1924dnkank\ndansdkandadkajkdka    \n dasjkdaj\n")
+    // because the double quoets essentially create a local scope with the string in it
+    // and replace its original position with a pointer to it
+    
+    // list mem contents
+    ls(mem)
+}
