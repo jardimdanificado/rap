@@ -2,6 +2,9 @@
 // CORE PREPROCESSOR - Motor de Processamento
 // ============================================
 // Com suporte a operadores matemáticos, condicionais, definição e indexação
+
+const maxIterations = 512;
+
 // === EXTRAÇÃO DE BLOCO BALANCEADO ===
 function extractBlock(src, openpos, open, close) {
     let i = openpos;
@@ -204,7 +207,7 @@ function resolveNestedIndex(indexExpr) {
 function convertIndexation(src) {
     let changed = true;
     let iterations = 0;
-    const maxIterations = 100;
+    
     
     while (changed && iterations < maxIterations) {
         changed = false;
@@ -362,7 +365,7 @@ function convertIndexation(src) {
 function convertMathOperators(src) {
     let changed = true;
     let iterations = 0;
-    const maxIterations = 100;
+    
     while (changed && iterations < maxIterations) {
         changed = false;
         iterations++;
@@ -399,7 +402,7 @@ function convertMathOperators(src) {
 function convertComparisonOperators(src) {
     let changed = true;
     let iterations = 0;
-    const maxIterations = 100;
+    
     while (changed && iterations < maxIterations) {
         changed = false;
         iterations++;
@@ -440,7 +443,7 @@ function convertComparisonOperators(src) {
 function convertLogicalOperators(src) {
     let changed = true;
     let iterations = 0;
-    const maxIterations = 100;
+    
     while (changed && iterations < maxIterations) {
         changed = false;
         iterations++;
@@ -468,7 +471,7 @@ function convertLogicalOperators(src) {
 function convertBitwiseOperators(src) {
     let changed = true;
     let iterations = 0;
-    const maxIterations = 100;
+    
     while (changed && iterations < maxIterations) {
         changed = false;
         iterations++;
@@ -488,11 +491,11 @@ function convertBitwiseOperators(src) {
         });
         src = src.replace(/(@?[A-Za-z0-9_)]+)\s*<<\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
             changed = true;
-            return match.replace(/(@?[A-Za-z0-9_)]+)\s*<<\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'shl($1, $2)');
+            return match.replace(/(@?[A-Za-z0-9_)]+)\s*<<\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'lshift($1, $2)');
         });
         src = src.replace(/(@?[A-Za-z0-9_)]+)\s*>>\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
             changed = true;
-            return match.replace(/(@?[A-Za-z0-9_)]+)\s*>>\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'shr($1, $2)');
+            return match.replace(/(@?[A-Za-z0-9_)]+)\s*>>\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'lshift($1, $2)');
         });
         src = src.replace(/~\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
             changed = true;
@@ -509,7 +512,7 @@ function convertBitwiseOperators(src) {
 function convertAssignment(src) {
     let changed = true;
     let iterations = 0;
-    const maxIterations = 100;
+    
     while (changed && iterations < maxIterations) {
         changed = false;
         iterations++;
@@ -549,11 +552,11 @@ function convertAssignment(src) {
         });
         src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*<<=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
             changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*<<=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, shl($1, $2))');
+            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*<<=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, lshift($1, $2))');
         });
         src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*>>=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
             changed = true;
-            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*>>=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, shr($1, $2))');
+            return match.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*>>=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/, 'set(mem, $1, rshift($1, $2))');
         });
         // @ é parte do identificador desde o início
         src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*=\s*(?!=)(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g, (match) => {
@@ -572,7 +575,7 @@ function reorderFunctionCalls(src, macros) {
     const forbidden = { ...macros, 'private': true, 'public': true, 'protected': true };
     let changed = true;
     let iterations = 0;
-    const maxIterations = 100;
+    
     
     while (changed && iterations < maxIterations) {
         changed = false;
