@@ -17,7 +17,7 @@ COMPILER="$COMPILER" ./rap/scripts/compile_assembler.sh "$LIBS"
 ./rap/scripts/assemble.sh "$tmp_pre" > "$tmp_urbin"
 ./rap/scripts/gen_embedded_c.sh "$tmp_urbin" > build/embedded.c
 
-$COMPILER -o $tmp_urb build/embedded.c -I./urb/
+$COMPILER -o $tmp_urb build/embedded.c -I./
 
 cat $tmp_urb
 trap 'rm -f "$tmp_pre" "$tmp_urb" "$tmp_urb_exec" "$tmp_urbin"' EXIT

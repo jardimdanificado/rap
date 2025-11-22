@@ -9,6 +9,9 @@ clean:
 	-rm -rf build rapper beatmaker makeself quickjs
 	-rm ./valgrind-out*
 	-rm -rf ./.tmp/*
+	-rm -rf quickjs
+	-rm -rf makeself
+	-rm -rf urb
 debug:
 ifndef filename
 	$(error filename missing! use: make debug filename=<file>)

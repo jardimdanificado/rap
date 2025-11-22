@@ -7,4 +7,4 @@ if [[ -z "$COMPILER" ]]; then
 fi
 
 # compile the bytecode assembler(beatmaker)
-$COMPILER -o beatmaker rap/src/assembler.c -g -I./urb/ -lm -O3
+$COMPILER -o beatmaker rap/src/assembler.c -g -I./ -lm -O3

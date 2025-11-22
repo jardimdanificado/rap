@@ -53,9 +53,14 @@ else
     qjs="qjs"
 fi
 
-if [ -f "urb/urb.h" ]; then
+if [ ! -f "urb/urb.h" ]; then
+    if [ ! -d "libs" ]; then
+        mkdir libs
+    fi
     rm -rf urb
     git clone https://github.com/jardimdanificado/urb.git
+    cp urb/urb.h .
+    cp urb/libs/* ./libs/
 fi
 
 COMPILER="$COMPILER" ./rap/scripts/gen_interpreter.sh "$LIBS"
@@ -66,7 +71,7 @@ cp Makefile build/urb_tar/
 
 cp rapper build/urb_tar/
 cp beatmaker build/urb_tar/
-cp urb/urb.h build/urb_tar/
+cp urb.h build/urb_tar/
 cp build/urb.c build/urb_tar/build/
 
 cp -r rap/scripts build/urb_tar/rap/

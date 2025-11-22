@@ -14,7 +14,7 @@ tmp_c="${output[0]}"
 funcs=("${output[@]:1}")
 
 {
-    echo "#include \"urb/urb.h\""
+    echo "#include \"urb.h\""
     echo "typedef struct List List;"
     echo "typedef union Value Value;"
     echo "typedef void (*Function)(List *stack);"

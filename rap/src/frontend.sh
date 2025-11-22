@@ -147,7 +147,7 @@ case "$command" in
     if [[ -n "$DONT_COMPILE" ]]; then
       cp build/embedded.c "$USER_PWD/$output"
     else
-      $COMPILER -o "$USER_PWD/$output" build/embedded.c -I./urb/
+      $COMPILER -o "$USER_PWD/$output" build/embedded.c -I./
     fi
     ;;
 
