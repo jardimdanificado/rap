@@ -3,9 +3,8 @@
 // the first value of that local scope is 0
 // so technically, i points to the value 0
 private i {0}
-private loop {
+while(@i < 100000)
+{
     println(@i)
     i += 1
 }
-
-goif(@i < 100000, loop)

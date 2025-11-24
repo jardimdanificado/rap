@@ -77,8 +77,6 @@ function patternToRegex(pattern) {
     while (i < pattern.length) {
         // Verifica por $$
         if (i + 1 < pattern.length && pattern[i] === '$' && pattern[i + 1] === '$') {
-            // $$ agora pode aparecer entre caracteres (não apenas espaços)
-            // Vamos substituir por \s* (espaço opcional), mas não consome caracteres reais
             regex += '\\s*';
             i += 2;
             continue;
@@ -112,25 +110,48 @@ function patternToRegex(pattern) {
             }
         }
 
+        // Verifica por captura até token: $var...token
         if (pattern[i] === '$') {
-            // Captura nome da variável (simples, sem delimitadores)
             let j = i + 1;
             let varName = '';
             while (j < pattern.length && /[A-Za-z0-9_]/.test(pattern[j])) {
                 varName += pattern[j];
                 j++;
             }
+
+            if (varName && j < pattern.length && pattern[j] === '.' && j + 2 < pattern.length && pattern[j + 1] === '.' && pattern[j + 2] === '.') {
+                // Achamos $var...
+                j += 3; // pula ...
+                let token = '';
+                while (j < pattern.length && /\S/.test(pattern[j])) { // Lê até encontrar um espaço ou fim
+                    token += pattern[j];
+                    j++;
+                }
+
+                if (token) {
+                    // Escapa o token para regex
+                    const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    // Captura qualquer coisa até o token (não-greedy)
+                    regex += '((?:.|\\r|\\n)*?)' + escapedToken;
+                    varCounter++;
+                    i = j;
+                    continue;
+                }
+            }
+
+            // Se não for ...token, apenas captura variável normal
             if (varName) {
-                // Grupo de captura que pega qualquer coisa não-whitespace
                 regex += '(\\S+)';
                 varCounter++;
                 i = j;
             } else {
-                // Apenas $ (solto)
                 regex += '\\$';
                 i++;
             }
-        } else if (/\s/.test(pattern[i])) {
+            continue;
+        }
+
+        if (/\s/.test(pattern[i])) {
             // Qualquer whitespace vira \s+
             regex += '\\s+';
             // Pula todos os espaços consecutivos no pattern
@@ -167,25 +188,25 @@ function extractVarNames(pattern) {
     const vars = [];
     const seen = new Set();
     let i = 0;
-    
+
     while (i < pattern.length) {
         // Verifica por $$
         if (i + 1 < pattern.length && pattern[i] === '$' && pattern[i + 1] === '$') {
             i += 2;
             continue;
         }
-        
+
         // Verifica por delimitadores com variáveis
-        if ((pattern[i] === '{' || pattern[i] === '(' || pattern[i] === '[') && 
+        if ((pattern[i] === '{' || pattern[i] === '(' || pattern[i] === '[') &&
             i + 1 < pattern.length && pattern[i + 1] === '$') {
-            
+
             const closeDelim = pattern[i] === '{' ? '}' : (pattern[i] === '(' ? ')' : ']');
             let j = i + 2;
-            
+
             while (j < pattern.length && /[A-Za-z0-9_]/.test(pattern[j])) {
                 j++;
             }
-            
+
             if (j < pattern.length && pattern[j] === closeDelim) {
                 const varName = pattern.substring(i + 2, j);
                 if (!seen.has(varName)) {
@@ -196,14 +217,34 @@ function extractVarNames(pattern) {
                 continue;
             }
         }
-        
+
+        // Verifica por captura até token: $var...token
         if (pattern[i] === '$') {
             let j = i + 1;
+            let varName = '';
             while (j < pattern.length && /[A-Za-z0-9_]/.test(pattern[j])) {
+                varName += pattern[j];
                 j++;
             }
-            const varName = pattern.substring(i + 1, j);
-            if (!seen.has(varName)) {
+
+            if (varName && j < pattern.length && pattern[j] === '.' && j + 2 < pattern.length && pattern[j + 1] === '.' && pattern[j + 2] === '.') {
+                // Achamos $var...
+                j += 3; // pula ...
+                let token = '';
+                while (j < pattern.length && /\S/.test(pattern[j])) { // Lê até encontrar um espaço ou fim
+                    token += pattern[j];
+                    j++;
+                }
+
+                if (token && !seen.has(varName)) {
+                    vars.push('$' + varName);
+                    seen.add(varName);
+                }
+                i = j;
+                continue;
+            }
+
+            if (varName && !seen.has(varName)) {
                 vars.push('$' + varName);
                 seen.add(varName);
             }
@@ -212,7 +253,7 @@ function extractVarNames(pattern) {
             i++;
         }
     }
-    
+
     return vars;
 }
 

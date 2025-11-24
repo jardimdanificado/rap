@@ -4,7 +4,7 @@ private data {
     // position string
 }
 
-protected str {
+private str {
     \abcde1\s234dasdajsdlakjdnlaknk124-1924dnkank\ndansdkandadkajkdka\s\s\s\s\n\sdasjkdaj\n
 }
 

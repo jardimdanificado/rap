@@ -41,4 +41,3 @@ pattern {while$$($condition)$${$code}}
     }
     goif($condition, while_$counter)
 }
-
