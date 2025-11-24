@@ -56,12 +56,8 @@ fi
 
 # URB
 if [ ! -f "urb/urb.h" ]; then
-    if [ ! -d "libs" ]; then
-        mkdir libs
-    fi
     rm -rf urb
     git clone https://github.com/jardimdanificado/urb.git
-    cp urb/libs/* ./libs/
 fi
 
 COMPILER="$COMPILER" ./scripts/gen_interpreter.sh "$LIBS"
@@ -74,6 +70,7 @@ cp rapper build/urb_tar/
 cp beatmaker build/urb_tar/
 cp urb/urb.h build/urb_tar/urb/
 cp build/urb.c build/urb_tar/build/
+cp build/urb.rap build/urb_tar/build/
 
 cp -r scripts build/urb_tar/
 cp -r src build/urb_tar/

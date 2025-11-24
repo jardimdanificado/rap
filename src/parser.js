@@ -77,6 +77,8 @@ function patternToRegex(pattern) {
     while (i < pattern.length) {
         // Verifica por $$
         if (i + 1 < pattern.length && pattern[i] === '$' && pattern[i + 1] === '$') {
+            // $$ agora pode aparecer entre caracteres (não apenas espaços)
+            // Vamos substituir por \s* (espaço opcional), mas não consome caracteres reais
             regex += '\\s*';
             i += 2;
             continue;
@@ -97,13 +99,10 @@ function patternToRegex(pattern) {
 
             // Verifica se fecha com o delimitador correto
             if (j < pattern.length && pattern[j] === closeDelim) {
-                // Agora, ao invés de capturar com [^}]*, usamos uma expressão que captura blocos balanceados
-                // Ex: {$var} deve capturar tudo entre { e }, respeitando aninhamentos
                 const escapedOpen = openDelim === '(' ? '\\(' : (openDelim === '[' ? '\\[' : openDelim === '{' ? '\\{' : openDelim);
                 const escapedClose = closeDelim === ')' ? '\\)' : (closeDelim === ']' ? '\\]' : closeDelim === '}' ? '\\}' : closeDelim);
 
-                // Expressão que captura blocos balanceados (respeitando aninhamento)
-                // Ex: {a{b}c} é capturado como um bloco
+                // Usa a função auxiliar para capturar blocos balanceados
                 const innerRegex = buildBalancedBlockRegex(openDelim, closeDelim);
 
                 regex += escapedOpen + '(' + innerRegex + ')' + escapedClose;
@@ -116,13 +115,21 @@ function patternToRegex(pattern) {
         if (pattern[i] === '$') {
             // Captura nome da variável (simples, sem delimitadores)
             let j = i + 1;
+            let varName = '';
             while (j < pattern.length && /[A-Za-z0-9_]/.test(pattern[j])) {
+                varName += pattern[j];
                 j++;
             }
-            // Grupo de captura que pega qualquer coisa não-whitespace
-            regex += '(\\S+)';
-            varCounter++;
-            i = j;
+            if (varName) {
+                // Grupo de captura que pega qualquer coisa não-whitespace
+                regex += '(\\S+)';
+                varCounter++;
+                i = j;
+            } else {
+                // Apenas $ (solto)
+                regex += '\\$';
+                i++;
+            }
         } else if (/\s/.test(pattern[i])) {
             // Qualquer whitespace vira \s+
             regex += '\\s+';
@@ -147,7 +154,6 @@ function patternToRegex(pattern) {
 
 // Função auxiliar para gerar regex que captura blocos balanceados
 function buildBalancedBlockRegex(open, close) {
-    // Ex: para { }, captura tudo entre { e }, respeitando aninhamento
     const escapedOpen = open === '(' ? '\\(' : (open === '[' ? '\\[' : open === '{' ? '\\{' : open);
     const escapedClose = close === ')' ? '\\)' : (close === ']' ? '\\]' : close === '}' ? '\\}' : close);
 
@@ -294,42 +300,49 @@ function collectPatterns(src) {
     return [patterns, src];
 }
 
-// === APLICAÇÃO DE PATTERNS (MODIFICADA) ===
 function applyPatterns(src, patterns) {
     for (const pattern of patterns) {
         let changed = true;
         let iterations = 0;
-        
+
         while (changed && iterations < 512) {
             changed = false;
             iterations++;
-            
+
             const regex = patternToRegex(pattern.match);
             const varNames = extractVarNames(pattern.match);
-            
+
             src = src.replace(regex, (...args) => {
                 changed = true;
                 const match = args[0];
                 const captures = args.slice(1, -2);
-                
+
                 const varMap = {};
                 for (let i = 0; i < varNames.length; i++) {
                     varMap[varNames[i]] = captures[i] || '';
                 }
-                
+
                 let result = pattern.replace;
+
+                // Substitui as variáveis capturadas, **antes** de processar $$
                 for (const [varName, value] of Object.entries(varMap)) {
-                    result = result.replace(new RegExp('\\' + varName + '(?![A-Za-z0-9_])', 'g'), value);
+                    // Escapa o nome da variável para evitar conflitos com regex
+                    const escapedVarName = varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    // Substitui $varname, garantindo que não seja seguido por um caractere alfanumérico ou _
+                    result = result.replace(new RegExp(escapedVarName + '(?![A-Za-z0-9_])', 'g'), value);
                 }
-                
+
                 // Processa contadores no resultado da substituição
                 result = processCounterOperators(result);
-                
+
+                // Agora sim, remove os $$ para permitir concatenação
+                result = result.replace(/\$\$/g, '');
+
                 return result;
             });
         }
     }
-    
+
     return src;
 }
 
@@ -417,7 +430,7 @@ function convertDoubleQuoteStrings(src) {
             let formatted = content
                 .replace(/\n/g, '\\n')
                 .replace(/ /g, '\\s');
-            defs.push(`protected ${id} {\\${formatted}}`);
+            defs.push(`goto(${id}_end)\n ${id}: \\${formatted} ${id}_end:`);
             return `pointer(mem, ${id})`;
         }
     );
@@ -883,62 +896,6 @@ function reorderFunctionCalls(src, macros) {
     return src;
 }
 
-// === PROCESSAMENTO DE BLOCOS PUBLIC/PRIVATE/PROTECTED ===
-function process(s) {
-    let out = '';
-    let i = 0;
-    let protected_defs = [];
-    while (i < s.length) {
-        const remaining = s.substring(i);
-        const match = remaining.match(/^(.*?)\b(public|private|protected)\b/s);
-        if (match) {
-            const before = match[1];
-            const kw = match[2];
-            out += before;
-            i += match[0].length;
-            const nameMatch = s.substring(i).match(/^\s*(@?[A-Za-z_][@A-Za-z0-9_]*)\s*/);
-            if (nameMatch) {
-                const name = nameMatch[1];
-                i += nameMatch[0].length;
-                const blockMatch = s.substring(i).match(/^\s*\{/);
-                if (blockMatch) {
-                    i += blockMatch[0].length;
-                    const openPos = i - 1;
-                    const [inner, posAfter] = extractBlock(s, openPos, '{', '}');
-                    i = posAfter;
-                    const proc = process(inner);
-                    if (kw === 'public') {
-                        out += `${name}:
-${proc}
-${name}_end:`;
-                    } else if (kw === 'protected') {
-                        protected_defs.push(`${name}_end goto
-${name}:
-${proc}
-${name}_end:`);
-                    } else if (kw === 'private') {
-                        out += `${name}_end goto
-${name}:
-${proc}
-${name}_end:`;
-                    }
-                } else {
-                    out += `${kw} ${name}`;
-                }
-            } else {
-                out += kw;
-            }
-        } else {
-            out += s.substring(i);
-            break;
-        }
-    }
-    if (protected_defs.length > 0) {
-        out = protected_defs.join('\n') + '\n' + out;
-    }
-    return out;
-}
-
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\        src = src.replace(/(@?[A-Za-z_][@A-Za-z0-9_]*)\s*<<=\s*(@?[A-Za-z0-9_()]+(?:\s*\([^)]*\))?)/g');
 }
@@ -962,7 +919,6 @@ function preprocessCode(input) {
     src = convertLogicalOperators(src);  // Lógica (infinita)
     src = convertAssignment(src);  // Atribuição (infinita)
     src = reorderFunctionCalls(src, macros);  // Converte func(a, b) para b a func
-    src = process(src);  // Processa blocos public/private/protected
     return src;
 }
 

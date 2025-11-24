@@ -1,17 +1,4 @@
-pattern {if$$($condition)$${$iftrue}$$else$${$iffalse}} 
-{
-    $counter++
-    goif($condition, if_$counter_true)
-    goto(if_$counter_false)
-    private if_$counter_true {
-        $iftrue
-    }
-    private if_$counter_false {
-        $iffalse
-    }
-}
-
-if (1 >= ()900) 
+if (1 >= 900) 
 {
     pring("the condition is true\n")
 } 

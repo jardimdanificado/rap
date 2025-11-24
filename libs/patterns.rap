@@ -1,3 +1,16 @@
+pattern {public $name$${$code}} 
+{
+    $name:
+    $code
+    $name$$_end:
+}
+
+pattern {private $name$${$code}} 
+{
+    goto($name$$_end)
+    public $name {$code}
+}
+
 pattern {if$$($condition)$${$iftrue}$$else$${$iffalse}} 
 {
     $counter++

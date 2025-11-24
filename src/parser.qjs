@@ -5,6 +5,19 @@ import * as std from 'std';
 // Carregar o core
 std.loadScript('./src/parser.js');
 
+// Função para ler arquivo
+function readFileSync(filename) {
+    try {
+        const file = std.open(filename, 'r');
+        if (!file) return '';
+        const content = file.readAsString();
+        file.close();
+        return content || '';
+    } catch (e) {
+        return '';
+    }
+}
+
 // === LEITURA DE STDIN (QuickJS) ===
 function readStdin() {
     let input = '';
@@ -23,14 +36,19 @@ function readStdin() {
 // === MAIN ===
 function main() {
     try {
-        const input = readStdin();
+        // Ler o conteúdo de build/urb.rap e adicionar ao início da entrada
+        const headerContent = readFileSync('./build/urb.rap');
+        const stdinContent = readStdin();
         
-        if (!input.trim()) {
-            std.err.printf('Erro: entrada vazia\n');
+        // Concatenar conteúdo do header com a entrada stdin
+        const fullInput = headerContent + stdinContent;
+        
+        if (!fullInput.trim()) {
+            std.err.printf('Erro: entrada vazia (nem o header nem stdin)\n');
             std.exit(1);
         }
-
-        const output = preprocessCode(input);
+        
+        const output = preprocessCode(fullInput);
         std.out.printf('%s', output);
     } catch (err) {
         std.err.printf('Erro: %s\n', err.message);
