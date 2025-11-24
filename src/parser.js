@@ -1,7 +1,7 @@
 // ============================================
 // CORE PREPROCESSOR - Motor de Processamento
 // ============================================
-// Com suporte a operadores matemáticos, condicionais, definição e indexação
+// Com suporte a operadores matemáticos, condicionais, definição, indexação e PATTERNS
 
 const maxIterations = 512;
 
@@ -55,8 +55,188 @@ function extractBlock(src, openpos, open, close) {
         : '';
     return [inner, src.length];
 }
+// ============================================
+// SISTEMA GLOBAL DE CONTADOR
+// ============================================
+const counterState = {
+    value: 0,
+    reset: function() {
+        this.value = 0;
+    }
+};
 
-// === COLETA DE MACROS ===
+// ============================================
+// VERSÃO CORRIGIDA DE PATTERN MATCHING + CONTADOR
+// ============================================
+// Nova versão de patternToRegex com suporte a blocos balanceados
+function patternToRegex(pattern) {
+    let regex = '';
+    let i = 0;
+    let varCounter = 0;
+
+    while (i < pattern.length) {
+        // Verifica por $$
+        if (i + 1 < pattern.length && pattern[i] === '$' && pattern[i + 1] === '$') {
+            regex += '\\s*';
+            i += 2;
+            continue;
+        }
+
+        // Verifica por delimitadores com variáveis: {$var}, ($var), [$var]
+        if ((pattern[i] === '{' || pattern[i] === '(' || pattern[i] === '[') &&
+            i + 1 < pattern.length && pattern[i + 1] === '$') {
+
+            const openDelim = pattern[i];
+            const closeDelim = openDelim === '{' ? '}' : (openDelim === '(' ? ')' : ']');
+
+            // Captura nome da variável
+            let j = i + 2; // pula o delimitador e o $
+            while (j < pattern.length && /[A-Za-z0-9_]/.test(pattern[j])) {
+                j++;
+            }
+
+            // Verifica se fecha com o delimitador correto
+            if (j < pattern.length && pattern[j] === closeDelim) {
+                // Agora, ao invés de capturar com [^}]*, usamos uma expressão que captura blocos balanceados
+                // Ex: {$var} deve capturar tudo entre { e }, respeitando aninhamentos
+                const escapedOpen = openDelim === '(' ? '\\(' : (openDelim === '[' ? '\\[' : openDelim === '{' ? '\\{' : openDelim);
+                const escapedClose = closeDelim === ')' ? '\\)' : (closeDelim === ']' ? '\\]' : closeDelim === '}' ? '\\}' : closeDelim);
+
+                // Expressão que captura blocos balanceados (respeitando aninhamento)
+                // Ex: {a{b}c} é capturado como um bloco
+                const innerRegex = buildBalancedBlockRegex(openDelim, closeDelim);
+
+                regex += escapedOpen + '(' + innerRegex + ')' + escapedClose;
+                varCounter++;
+                i = j + 1;
+                continue;
+            }
+        }
+
+        if (pattern[i] === '$') {
+            // Captura nome da variável (simples, sem delimitadores)
+            let j = i + 1;
+            while (j < pattern.length && /[A-Za-z0-9_]/.test(pattern[j])) {
+                j++;
+            }
+            // Grupo de captura que pega qualquer coisa não-whitespace
+            regex += '(\\S+)';
+            varCounter++;
+            i = j;
+        } else if (/\s/.test(pattern[i])) {
+            // Qualquer whitespace vira \s+
+            regex += '\\s+';
+            // Pula todos os espaços consecutivos no pattern
+            while (i < pattern.length && /\s/.test(pattern[i])) {
+                i++;
+            }
+        } else {
+            // Caractere literal (escapa se necessário)
+            const char = pattern[i];
+            if (/[.*+?^${}()|[\]\\]/.test(char)) {
+                regex += '\\' + char;
+            } else {
+                regex += char;
+            }
+            i++;
+        }
+    }
+
+    return new RegExp(regex, 'g');
+}
+
+// Função auxiliar para gerar regex que captura blocos balanceados
+function buildBalancedBlockRegex(open, close) {
+    // Ex: para { }, captura tudo entre { e }, respeitando aninhamento
+    const escapedOpen = open === '(' ? '\\(' : (open === '[' ? '\\[' : open === '{' ? '\\{' : open);
+    const escapedClose = close === ')' ? '\\)' : (close === ']' ? '\\]' : close === '}' ? '\\}' : close);
+
+    // Regex para capturar blocos balanceados
+    // Ex: {a{b}c} -> captura a{b}c
+    return `(?:[^${escapedOpen}${escapedClose}\\\\]|\\\\.|${escapedOpen}(?:[^${escapedOpen}${escapedClose}\\\\]|\\\\.)*${escapedClose})*`;
+}
+
+// Versão corrigida de extractVarNames
+function extractVarNames(pattern) {
+    const vars = [];
+    const seen = new Set();
+    let i = 0;
+    
+    while (i < pattern.length) {
+        // Verifica por $$
+        if (i + 1 < pattern.length && pattern[i] === '$' && pattern[i + 1] === '$') {
+            i += 2;
+            continue;
+        }
+        
+        // Verifica por delimitadores com variáveis
+        if ((pattern[i] === '{' || pattern[i] === '(' || pattern[i] === '[') && 
+            i + 1 < pattern.length && pattern[i + 1] === '$') {
+            
+            const closeDelim = pattern[i] === '{' ? '}' : (pattern[i] === '(' ? ')' : ']');
+            let j = i + 2;
+            
+            while (j < pattern.length && /[A-Za-z0-9_]/.test(pattern[j])) {
+                j++;
+            }
+            
+            if (j < pattern.length && pattern[j] === closeDelim) {
+                const varName = pattern.substring(i + 2, j);
+                if (!seen.has(varName)) {
+                    vars.push('$' + varName);
+                    seen.add(varName);
+                }
+                i = j + 1;
+                continue;
+            }
+        }
+        
+        if (pattern[i] === '$') {
+            let j = i + 1;
+            while (j < pattern.length && /[A-Za-z0-9_]/.test(pattern[j])) {
+                j++;
+            }
+            const varName = pattern.substring(i + 1, j);
+            if (!seen.has(varName)) {
+                vars.push('$' + varName);
+                seen.add(varName);
+            }
+            i = j;
+        } else {
+            i++;
+        }
+    }
+    
+    return vars;
+}
+
+// Processa operadores de contador ($counter, $counter++, $counter--)
+function processCounterOperators(str) {
+    // $counter++ -> incrementa
+    str = str.replace(/\$counter\+\+/g, () => {
+        counterState.value++;
+        return "";
+    });
+    
+    // $counter-- -> decrementa
+    str = str.replace(/\$counter--/g, () => {
+        counterState.value--;
+        return "";
+    });
+    
+    // $counter -> retorna valor atual (sem modificar)
+    str = str.replace(/\$counter(?!\+|-)/g, () => {
+        return counterState.value.toString();
+    });
+    
+    return str;
+}
+
+// ============================================
+// INTEGRAÇÕES PRINCIPAIS
+// ============================================
+
+// === COLETA DE MACROS (MODIFICADA) ===
 function collectMacros(src) {
     const macros = {};
     const macroRegex = /\bmacro\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/g;
@@ -72,29 +252,103 @@ function collectMacros(src) {
     for (let j = matches.length - 1; j >= 0; j--) {
         const m = matches[j];
         const [body, posAfter] = extractBlock(src, m.openPos, '{', '}');
-        macros[m.name] = body;
+        // Processa contadores no corpo do macro
+        macros[m.name] = processCounterOperators(body);
         src = src.substring(0, m.matchStart) + src.substring(posAfter);
     }
     return [macros, src];
 }
-// === EXPANSÃO DE MACROS (VERSÃO CORRIGIDA) ===
+
+// === COLETA DE PATTERNS (MODIFICADA) ===
+function collectPatterns(src) {
+    const patterns = [];
+    const patternRegex = /\bpattern\s*\{/g;
+    let match;
+    const matches = [];
+    
+    while ((match = patternRegex.exec(src)) !== null) {
+        matches.push({
+            matchStart: match.index,
+            openPos: match.index + match[0].length - 1
+        });
+    }
+    
+    for (let j = matches.length - 1; j >= 0; j--) {
+        const m = matches[j];
+        const [matchPattern, posAfterMatch] = extractBlock(src, m.openPos, '{', '}');
+        
+        let k = posAfterMatch;
+        while (k < src.length && /\s/.test(src[k])) k++;
+        
+        if (k < src.length && src[k] === '{') {
+            const [replacePattern, posAfterReplace] = extractBlock(src, k, '{', '}');
+            patterns.push({
+                match: matchPattern.trim(),
+                // Processa contadores no padrão de replacement
+                replace: processCounterOperators(replacePattern.trim())
+            });
+            src = src.substring(0, m.matchStart) + src.substring(posAfterReplace);
+        }
+    }
+    
+    return [patterns, src];
+}
+
+// === APLICAÇÃO DE PATTERNS (MODIFICADA) ===
+function applyPatterns(src, patterns) {
+    for (const pattern of patterns) {
+        let changed = true;
+        let iterations = 0;
+        
+        while (changed && iterations < 512) {
+            changed = false;
+            iterations++;
+            
+            const regex = patternToRegex(pattern.match);
+            const varNames = extractVarNames(pattern.match);
+            
+            src = src.replace(regex, (...args) => {
+                changed = true;
+                const match = args[0];
+                const captures = args.slice(1, -2);
+                
+                const varMap = {};
+                for (let i = 0; i < varNames.length; i++) {
+                    varMap[varNames[i]] = captures[i] || '';
+                }
+                
+                let result = pattern.replace;
+                for (const [varName, value] of Object.entries(varMap)) {
+                    result = result.replace(new RegExp('\\' + varName + '(?![A-Za-z0-9_])', 'g'), value);
+                }
+                
+                // Processa contadores no resultado da substituição
+                result = processCounterOperators(result);
+                
+                return result;
+            });
+        }
+    }
+    
+    return src;
+}
+
+// === EXPANSÃO DE MACROS (MODIFICADA) ===
 function expandMacros(src, macros) {
     for (const name of Object.keys(macros)) {
         const body = macros[name];
         let changed = true;
         let iterations = 0;
         
-        while (changed && iterations < maxIterations) {
+        while (changed && iterations < 512) {
             changed = false;
             iterations++;
             const originalSrc = src;
             
-            // Procura por: name(args) ou name args
             let i = 0;
             let result = '';
             
             while (i < src.length) {
-                // Tenta encontrar o próximo nome de macro
                 const remaining = src.substring(i);
                 const nameMatch = remaining.match(new RegExp(`^(.*?)\\b${escapeRegex(name)}\\b`, 's'));
                 
@@ -106,20 +360,17 @@ function expandMacros(src, macros) {
                 result += nameMatch[1];
                 i += nameMatch[0].length;
                 
-                // Verifica se há ( depois do nome
                 let k = i;
                 while (k < src.length && src[k] === ' ') k++;
                 
                 let vals = [];
                 
                 if (k < src.length && src[k] === '(') {
-                    // Extrai argumentos com balanceamento
                     const [argsStr, posAfter] = extractBlock(src, k, '(', ')');
                     vals = argsStr.split(',').map(v => v.trim());
                     i = posAfter;
                     changed = true;
                 } else {
-                    // Tenta capturar argumentos separados por espaço
                     const spaceMatch = src.substring(i).match(/^(\s+([^\s{};()]+(?:\s+[^\s{};()]+)*?))?(?=\s*[{};()$]|\n|$)/);
                     if (spaceMatch && spaceMatch[2]) {
                         vals = spaceMatch[2].split(/\s+/);
@@ -131,7 +382,6 @@ function expandMacros(src, macros) {
                     }
                 }
                 
-                // Expande o macro
                 let exp = body;
                 exp = exp.replace(/\$0\b/g, name);
                 for (let j = 0; j < vals.length; j++) {
@@ -140,6 +390,8 @@ function expandMacros(src, macros) {
                     exp = exp.replace(new RegExp(`\\$${paramNum}(?!\\d)`, 'g'), paramVal);
                 }
                 exp = exp.replace(/\$\d+\b/g, '');
+                // Processa contadores na expansão do macro
+                exp = processCounterOperators(exp);
                 result += exp;
             }
             
@@ -546,6 +798,7 @@ function convertBitwiseOperators(src) {
     }
     return src;
 }
+
 // === CONVERSÃO DO OPERADOR DE DEFINIÇÃO (CORRIGIDO) ===
 function convertAssignment(src) {
     let changed = true;
@@ -696,6 +949,9 @@ function preprocessCode(input) {
     src = removeComments(src);
     const [macros, srcAfterMacros] = collectMacros(src);
     src = srcAfterMacros;
+    const [patterns, srcAfterPatterns] = collectPatterns(src);
+    src = srcAfterPatterns;
+    src = applyPatterns(src, patterns);  // Aplica patterns antes de expandir macros
     src = expandMacros(src, macros);
     src = convertDoubleQuoteStrings(src);
     // Novos processamentos de operadores (ordem importa)
@@ -709,6 +965,7 @@ function preprocessCode(input) {
     src = process(src);  // Processa blocos public/private/protected
     return src;
 }
+
 // Export para diferentes ambientes
 if (typeof module !== 'undefined' && module.exports) {
     // Node.js / CommonJS

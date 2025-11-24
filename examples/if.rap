@@ -1,13 +1,21 @@
-// new
-macro if{
-    goif($2, $1_true)
-    goto($1_false)
-    private $1_true {
-        $3
+pattern {if$$($condition)$${$iftrue}$$else$${$iffalse}} 
+{
+    $counter++
+    goif($condition, if_$counter_true)
+    goto(if_$counter_false)
+    private if_$counter_true {
+        $iftrue
     }
-    private $1_false {
-        $4
+    private if_$counter_false {
+        $iffalse
     }
 }
 
-if(generic_name, 1 >= 900, pring("the condition is true\n"), pring("the condition is false\n"))
+if (1 >= ()900) 
+{
+    pring("the condition is true\n")
+} 
+else 
+{
+    pring("the condition is false\n")
+}
