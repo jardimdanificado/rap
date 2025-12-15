@@ -1,33 +1,30 @@
 # rap
-rap is a **EXPERIMENTAL AND UNSTABLE *EXAMPLE*** language to demonstrate usage of urb virtual machine.
+rap is a **EXPERIMENTAL AND UNSTABLE *EXAMPLE*** language to demonstrate the urb virtual machine usage.
 
 proper standards and documentation are currently WIP
 
 ## requirements
 
-for using the rap toolkit, you will need:
-- **git**
-- **sed**
-- **xxd**
-- **binutils** - quickjs will need this
-- **bash**
-- **a C compiler** - i recommend gcc or tcc, but almost any c compiler is supported.
-
-most linux systems will already include everything above;
-
-all requirements below are auto downloaded if not found:
-- **makeself** - https://makeself.io/ or https://github.com/megastep/makeself
-- **quickjs** - https://bellard.org/quickjs/ or https://github.com/bellard/quickjs
-
-and of course it also requires urb:
+- **papagaio** - https://github.com/jardimdanificado/papagaio
 - **urb** - https://github.com/jardimdanificado/urb
 
 ## compatibility
-the **toolkit** is only meant to support linux.
+just std c99 required, so might work anywhere with a working c compiler.
 
-but you can still cross-compiling embedded urb from linux to other systems like windows or such.
+## usage
 
-## compiling
-from the repo root run ``make`` and you will find the rap toolkit in ``./build/rap``, then run ``rap help`` and you will probably find everything you need there, further docs are bein written right now...
+```bash
+    # just in case
+    make clean
+    # this will generate rap.papagaio from libs/
+    make
+    # now we generate our.c file from a example + our just generated rap.papagaio
+    papagaio rap.papagaio examples/simple.rap > simple.c
+    # now we can compile it with any c99 compiler:
+    gcc -o simple simple.c
+    # lets run
+    ./simple
+```
 
-as the rap toolkit does not work on windows directly, but you can cross-compile with something like ``rap embed file.rap -o file.exe -cc $mingw`` from WSL or such...
+## notes
+- fun fact: **papagaio** was initially the former `src/parser.js` file, and papagaio's cli was `src/parser.qjs`.

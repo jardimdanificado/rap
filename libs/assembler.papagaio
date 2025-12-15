@@ -1,0 +1,109 @@
+$eval{
+    function parseNumericString(s) {
+        const str = s.trim();
+        if (str === "") {
+            return NaN;
+        }
+
+        if (/^[+-]?\d+(?:\.\d+)?[fF]$/.test(str)) {
+            return Number(str.slice(0, -1));
+        }
+
+        if (/^[+-]?(?:\d*\.\d+|\d+\.\d*)$/.test(str)) {
+            return Number(str);
+        }
+
+        if (/^[+-]?\d+(?:\.\d+)?[eE][+-]?\d+$/.test(str)) {
+            return Number(str);
+        }
+
+        if (/^[+-]?\d+$/.test(str)) {
+            return BigInt(str);
+        }
+
+        if (/^[+-]?0[xX][0-9a-fA-F]+$/.test(str) ||
+            /^[+-]?0[bB][01]+$/.test(str) ||
+            /^[+-]?0[oO][0-7]+$/.test(str)) {
+            return BigInt(str);
+        }
+
+        return NaN;
+    }
+
+    // isNaN doesnt work for BigInt's
+    function isNumeric(x) {
+        return (
+            typeof x === "number" && !Number.isNaN(x) ||
+            typeof x === "bigint"
+        );
+    }
+
+    papagaio.counter = 0;
+    papagaio.funcs = [];
+    papagaio.output = '#include "urb.h"\n\n';
+    papagaio.assemble = (stuff) => {
+        stuff = stuff.trim();
+        let funcs = papagaio.funcs.join(" ").replaceAll("URB_", "").replaceAll("urb_", "").split(" ");
+        let code = papagaio.content.replaceAll("\n", " ").trim().split(" ");
+        let result = "\nList *mem = urb_new(" + code.length + ");\n";
+        for (const token of code)
+        {
+            result += "\t";
+            if (isNumeric(parseNumericString(token)))
+            {
+                result += "urb_push(mem, (Value){.i = " + parseNumericString(token) + "});\n"
+                continue;
+            }
+            else if (token[0] == '@')
+            {
+                result += "urb_push(mem, (Value){.u = " + "(" + "INT_MAX - " + token.slice(1) + " )" + "});\n"
+            }
+            else
+            {
+                for (const funcname of funcs)
+                {
+                    if (funcname == token)
+                    {
+                        result += "urb_push(mem, (Value){.u = (INT_MIN + OP_CODES_OFFSET + " + funcs.indexOf(token) + ")});\n"
+                        break;
+                    }
+                }
+                continue;
+            }
+        }
+        return result;
+    }
+
+    papagaio.exit = () =>{
+        papagaio.output += "\nint main(int argc, char* argv[]){\n";
+        papagaio.output += papagaio.assemble(papagaio.content);
+        papagaio.output += "\n\tList *exec = urb_new(" + papagaio.funcs.length + ");\n";
+        for (const name of papagaio.funcs)
+        {
+            papagaio.output += "\turb_push(exec, (Value){.p = " + name + "});\n";
+        }
+        papagaio.output += "\turb_interpret(exec, mem, NULL);\n";
+        papagaio.output += "\turb_free(exec);\n";
+        papagaio.output += "}\n";
+        papagaio.content = papagaio.output;
+        return "";
+    }
+    return ""
+}
+
+$pattern{C $block c_code{}{}}
+{
+    $pattern {\n} {\\n}
+    $eval{
+        papagaio.output = papagaio.output + " " + `$c_code`;
+        return "";
+    }
+    
+    $pattern{void $funcname(List * stack) $block conteudo{} {}}
+    {
+        $eval{
+            papagaio.funcs.push("$funcname");
+            return papagaio.match;
+        }
+    }
+}
