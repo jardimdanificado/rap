@@ -40,19 +40,28 @@ $eval{
 
     papagaio.counter = 0;
     papagaio.funcs = [];
+    papagaio.labels = [];
     papagaio.output = '#include "urb.h"\n\n';
     papagaio.assemble = (stuff) => {
         stuff = stuff.trim();
         let funcs = papagaio.funcs.join(" ").replaceAll("URB_", "").replaceAll("urb_", "").split(" ");
         let code = papagaio.content.replaceAll("\n", " ").trim().split(" ");
         let result = "\nList *mem = urb_new(" + code.length + ");\n";
+        for (let i = 0; i < code.length;i++)
+        {
+            if (code[i].endsWith(":"))
+            {
+                papagaio.labels.push({index: i, name: code[i].replace(":", "")});
+                code = code.filter((word, index) => index != i);
+                i--;
+            }
+        }
         for (const token of code)
         {
             result += "\t";
             if (isNumeric(parseNumericString(token)))
             {
                 result += "urb_push(mem, (Value){.i = " + parseNumericString(token) + "});\n"
-                continue;
             }
             else if (token[0] == '@')
             {
@@ -60,15 +69,28 @@ $eval{
             }
             else
             {
-                for (const funcname of funcs)
+                let found = false;
+                for (const label of papagaio.labels)
                 {
-                    if (funcname == token)
+                    if (label.name == token)
                     {
-                        result += "urb_push(mem, (Value){.u = (INT_MIN + OP_CODES_OFFSET + " + funcs.indexOf(token) + ")});\n"
+                        result += "urb_push(mem, (Value){.u = " + label.index + "});\n";
+                        found = true;
                         break;
                     }
                 }
-                continue;
+                if (!found)
+                {
+                    for (const funcname of funcs)
+                    {
+                        if (funcname == token)
+                        {
+                            result += "urb_push(mem, (Value){.u = (INT_MIN + OP_CODES_OFFSET + " + funcs.indexOf(token) + ")});\n"
+                            found = true;
+                            break;
+                        }
+                    }
+                }
             }
         }
         return result;

@@ -5,6 +5,6 @@ all:
 	cat libs/open libs/*.c libs/close libs/*.papagaio > rap.papagaio
 	
 clean:
-	rm rap.papagaio
-	rm -rf urb
-	rm urb.h
+	-rm rap.papagaio
+	-rm -rf urb
+	-rm urb.h

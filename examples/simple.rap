@@ -1,2 +1,2 @@
-785 stack push
-println
+785 stack push 
+test println test:
