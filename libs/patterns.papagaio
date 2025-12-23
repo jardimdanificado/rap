@@ -1,6 +1,6 @@
 $eval{papagaio.counter = 0;return ""}
 
-$pattern {if $block condition{(}{)} $block iftrue{}{} else $block iffalse{}{}} 
+$pattern {if ${(}{)}condition ${}{}iftrue else ${}{}iffalse} 
 {
     counter++
     goif($condition, if_counter_true)
@@ -13,7 +13,7 @@ $pattern {if $block condition{(}{)} $block iftrue{}{} else $block iffalse{}{}}
     }
 }
 
-$pattern {do $block code{}{} while $block condition{(}{)}}
+$pattern {do ${}{}code while ${(}{)}condition}
 {
     counter++
     public dowhile_counter {
@@ -22,7 +22,7 @@ $pattern {do $block code{}{} while $block condition{(}{)}}
     goif($condition, dowhile_counter)
 }
 
-$pattern {while $block condition{(}{)} $block code{}{}}
+$pattern {while ${(}{)}condition ${}{}code}
 {
     counter++
     private while_counter {
@@ -31,7 +31,7 @@ $pattern {while $block condition{(}{)} $block code{}{}}
     goif($condition, while_counter)
 }
 
-$pattern {$name $block vars{(}{)}}
+$pattern {$name ${(}{)}vars}
 {
     $eval{
         let splited = `$vars`.split(",");
@@ -44,13 +44,13 @@ $pattern {$name $block vars{(}{)}}
     }
 }
 
-$pattern {private $name $block code{}{}} 
+$pattern {private $name ${}{}code} 
 {
     goto($name.end)
     public $name {$code}
 }
 
-$pattern {public $name $block code{}{}} 
+$pattern {public $name ${}{}code}
 {
     $name:
     $code

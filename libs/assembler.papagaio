@@ -113,7 +113,7 @@ $eval{
     return ""
 }
 
-$pattern{C $block c_code{}{}}
+$pattern{C ${}{}c_code}
 {
     $pattern {\n} {\\n}
     $eval{
@@ -121,7 +121,7 @@ $pattern{C $block c_code{}{}}
         return "";
     }
     
-    $pattern{void $funcname(List * stack) $block conteudo{} {}}
+    $pattern{void $funcname(List * stack) ${}{}conteudo}
     {
         $eval{
             papagaio.funcs.push("$funcname");
